@@ -43,13 +43,17 @@ class PreviewPane(QWebEngineView):
             )
 
     def _set_html_preserve_scroll(self, html: str, scroll_y: int) -> None:
-        self.setHtml(html, QUrl("about:blank"))
         if scroll_y > 0:
-            page = self.page()
-            if page is not None:
-                page.runJavaScript(
-                    f"window.addEventListener('load', () => window.scrollTo(0, {scroll_y}), {{once:true}})"
-                )
+            # Connect before setHtml so the signal fires after the new page loads.
+            # The handler disconnects itself after the first call to avoid stacking.
+            def _on_load(_ok: bool) -> None:
+                self.loadFinished.disconnect(_on_load)
+                page = self.page()
+                if page is not None:
+                    page.runJavaScript(f"window.scrollTo(0, {scroll_y})")
+
+            self.loadFinished.connect(_on_load)
+        self.setHtml(html, QUrl("about:blank"))
 
     def apply_theme(self, theme: AppTheme) -> None:
         self._theme = theme

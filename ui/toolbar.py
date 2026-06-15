@@ -60,10 +60,12 @@ class Toolbar(QWidget):
         self._btn_new = ToolButton("⊕", "New file  (Ctrl+N)")
         self._btn_open = ToolButton("⊙", "Open file  (Ctrl+O)")
         self._btn_save = ToolButton("⊘", "Save  (Ctrl+S)")
+        self._btn_save_as = ToolButton("⊘…", "Save As  (Ctrl+Shift+S)")
 
         layout.addWidget(self._btn_new)
         layout.addWidget(self._btn_open)
         layout.addWidget(self._btn_save)
+        layout.addWidget(self._btn_save_as)
         layout.addWidget(Divider())
 
         # Insert helpers
@@ -132,6 +134,7 @@ class Toolbar(QWidget):
         self._btn_new.clicked.connect(self.new_file)
         self._btn_open.clicked.connect(self.open_file)
         self._btn_save.clicked.connect(self.save_file)
+        self._btn_save_as.clicked.connect(self.save_as)
         self._btn_exp_html.clicked.connect(self.export_html_sig)
         self._btn_exp_pdf.clicked.connect(self.export_pdf_sig)
         self._btn_find.clicked.connect(self.find_triggered)

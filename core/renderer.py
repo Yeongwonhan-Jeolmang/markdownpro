@@ -45,6 +45,10 @@ class MarkdownRenderer:
 
     @staticmethod
     def pygments_css(style: str = "monokai") -> str:
-        """Return Pygments CSS for the given style name."""
-        formatter = HtmlFormatter(style=style)
+        """Return Pygments CSS for the given style name.
+        Falls back to 'monokai' if the requested style is not installed."""
+        try:
+            formatter = HtmlFormatter(style=style)
+        except Exception:
+            formatter = HtmlFormatter(style="monokai")
         return formatter.get_style_defs(".highlight")

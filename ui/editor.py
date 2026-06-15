@@ -31,6 +31,9 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         accent = QColor(theme.accent)
         dim = QColor(theme.fg_dim)
         fg = QColor(theme.editor_fg)
+        base_font_size = (
+            document.defaultFont().pointSize() if document is not None else 13
+        )
 
         def fmt(color=None, bold=False, italic=False, size_delta=0) -> QTextCharFormat:
             f = QTextCharFormat()
@@ -40,6 +43,8 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 f.setFontWeight(700)
             if italic:
                 f.setFontItalic(True)
+            if size_delta:
+                f.setFontPointSize(base_font_size + size_delta)
             return f
 
         self._rules = [

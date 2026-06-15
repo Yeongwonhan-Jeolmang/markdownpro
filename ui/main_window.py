@@ -252,7 +252,7 @@ class MainWindow(QMainWindow):
         reply = QMessageBox.question(
             self,
             "Unsaved changes",
-            f"'{self._document.display_name.lstrip('● ')}' has unsaved changes.\nDiscard them?",
+            f"'{self._document.display_name.removeprefix('●  ')}' has unsaved changes.\nDiscard them?",
             QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
         )
         return reply == QMessageBox.StandardButton.Discard
