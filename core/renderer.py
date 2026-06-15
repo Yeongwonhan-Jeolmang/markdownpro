@@ -32,6 +32,7 @@ _EXTENSIONS = [
     "meta",
 ]
 
+
 class MarkdownRenderer:
     """Stateless converter: Markdown text → HTML fragment."""
 
