@@ -10,6 +10,7 @@ from PyQt6.QtCore import Qt, QRect, QSize, pyqtSignal
 from PyQt6.QtGui import (
     QColor,
     QPainter,
+    QPaintEvent,
     QTextFormat,
     QFont,
     QTextCharFormat,
@@ -24,7 +25,7 @@ import re
 
 class MarkdownHighlighter(QSyntaxHighlighter):
 
-    def __init__(self, document: QTextDocument, theme: AppTheme) -> None:
+    def __init__(self, document: QTextDocument | None, theme: AppTheme) -> None:
         super().__init__(document)
         self._rules: list[tuple[re.Pattern, QTextCharFormat]] = []
         accent = QColor(theme.accent)
@@ -73,7 +74,9 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             (re.compile(r"<[^>]+>"), fmt(dim.name())),
         ]
 
-    def highlightBlock(self, text: str) -> None:
+    def highlightBlock(self, text: str | None) -> None:
+        if text is None:
+            return
         for pattern, fmt in self._rules:
             for m in pattern.finditer(text):
                 self.setFormat(m.start(), m.end() - m.start(), fmt)
@@ -90,8 +93,8 @@ class LineNumberGutter(QWidget):
     def sizeHint(self) -> QSize:
         return QSize(self._editor.gutter_width(), 0)
 
-    def paintEvent(self, event) -> None:
-        self._editor.paint_gutter(event)
+    def paintEvent(self, a0) -> None:
+        self._editor.paint_gutter(a0)
 
 
 # ── Main editor ────────────────────────────────────────────────────────────
@@ -153,17 +156,20 @@ class MarkdownEditor(QPlainTextEdit):
             self._gutter.scroll(0, dy)
         else:
             self._gutter.update(0, rect.y(), self._gutter.width(), rect.height())
-        if rect.contains(self.viewport().rect()):
+        vp = self.viewport()
+        if vp is not None and rect.contains(vp.rect()):
             self._update_gutter_width(0)
 
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
+    def resizeEvent(self, e) -> None:
+        super().resizeEvent(e)
         cr = self.contentsRect()
         self._gutter.setGeometry(
             QRect(cr.left(), cr.top(), self.gutter_width(), cr.height())
         )
 
-    def paint_gutter(self, event) -> None:
+    def paint_gutter(self, event: QPaintEvent | None) -> None:
+        if event is None:
+            return
         painter = QPainter(self._gutter)
         painter.fillRect(event.rect(), QColor(self._theme.editor_line))
 
@@ -201,10 +207,13 @@ class MarkdownEditor(QPlainTextEdit):
         extras: list[QTextEdit.ExtraSelection] = []
         if not self.isReadOnly():
             sel = QTextEdit.ExtraSelection()
-            sel.format.setBackground(QColor(self._theme.editor_line))
-            sel.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
-            sel.cursor = self.textCursor()
-            sel.cursor.clearSelection()
+            fmt = QTextCharFormat()
+            fmt.setBackground(QColor(self._theme.editor_line))
+            fmt.setProperty(QTextFormat.Property.FullWidthSelection, True)
+            object.__setattr__(sel, "format", fmt)
+            cursor = self.textCursor()
+            cursor.clearSelection()
+            object.__setattr__(sel, "cursor", cursor)
             extras.append(sel)
         self.setExtraSelections(extras)
 

@@ -230,7 +230,9 @@ class MainWindow(QMainWindow):
         prefix, suffix, placeholder = inserts.get(mode, ("", "", ""))
         self._insert_snippet(prefix, suffix, placeholder)
 
-    def _insert_snippet(self, prefix: str, suffix: str, placeholder: str) -> None:
+    def _insert_snippet(
+        self, prefix: str, suffix: str, placeholder: str | None
+    ) -> None:
         cur = self._editor.textCursor()
         had_selection = cur.hasSelection()
         selected = cur.selectedText() or placeholder or ""
@@ -277,7 +279,8 @@ class MainWindow(QMainWindow):
         self._document = Document.open(Path(path))
         self._editor.setPlainText(self._document.text)
         self._status.set_file(self._document.display_name)
-        self.setWindowTitle(f"MarkdownPro – {self._document.path.name}")
+        if self._document.path is not None:
+            self.setWindowTitle(f"MarkdownPro – {self._document.path.name}")
 
     def _on_save(self) -> None:
         if self._document.path is None:
@@ -294,7 +297,8 @@ class MainWindow(QMainWindow):
             return
         self._document.save(Path(path))
         self._status.set_file(self._document.display_name)
-        self.setWindowTitle(f"MarkdownPro – {self._document.path.name}")
+        if self._document.path is not None:
+            self.setWindowTitle(f"MarkdownPro – {self._document.path.name}")
 
     def _on_export_html(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
@@ -346,16 +350,20 @@ class MainWindow(QMainWindow):
             self.restoreGeometry(geo)
         else:
             self.resize(1280, 800)
-            screen = QApplication.primaryScreen().availableGeometry()
-            self.move(
-                (screen.width() - self.width()) // 2,
-                (screen.height() - self.height()) // 2,
-            )
+            primary_screen = QApplication.primaryScreen()
+            if primary_screen is not None:
+                screen = primary_screen.availableGeometry()
+                self.move(
+                    (screen.width() - self.width()) // 2,
+                    (screen.height() - self.height()) // 2,
+                )
 
-    def closeEvent(self, event) -> None:
+    def closeEvent(self, a0) -> None:
         if not self._check_unsaved():
-            event.ignore()
+            if a0 is not None:
+                a0.ignore()
             return
         self._settings.setValue("geometry", self.saveGeometry())
         self._settings.setValue("theme", self._theme.name)
-        event.accept()
+        if a0 is not None:
+            a0.accept()

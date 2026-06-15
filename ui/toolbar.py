@@ -158,7 +158,9 @@ class Toolbar(QWidget):
             (self._view_preview, "preview"),
         ):
             btn.setProperty("active", m == mode)
-            btn.style().polish(btn)
+            style = btn.style()
+            if style is not None:
+                style.polish(btn)
         self.view_changed.emit(mode)
 
     # ── Insert helpers (emit signals consumed by MainWindow) ───────────────
