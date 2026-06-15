@@ -4,10 +4,12 @@ QWebEngineView wrapper that displays the rendered HTML preview.
 """
 
 from __future__ import annotations
+import weakref
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings
 from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QColor
+from PyQt6 import sip
 from themes import AppTheme
 from core.renderer import MarkdownRenderer
 from core.page_builder import build_page
@@ -37,10 +39,15 @@ class PreviewPane(QWebEngineView):
         # Preserve scroll position
         page = self.page()
         if page is not None:
-            page.runJavaScript(
-                "window.scrollY",
-                lambda y: self._set_html_preserve_scroll(page_html, int(y) if y else 0),
-            )
+            weak_self = weakref.ref(self)
+
+            def _scroll_callback(y):
+                pane = weak_self()
+                if pane is None or sip.isdeleted(pane):
+                    return
+                pane._set_html_preserve_scroll(page_html, int(y) if y else 0)
+
+            page.runJavaScript("window.scrollY", _scroll_callback)
 
     def _set_html_preserve_scroll(self, html: str, scroll_y: int) -> None:
         if scroll_y > 0:

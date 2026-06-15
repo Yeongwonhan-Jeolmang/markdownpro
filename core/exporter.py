@@ -25,4 +25,7 @@ def export_pdf(web_view, dest: Path) -> None:
         QPageLayout.Orientation.Portrait,
         QMarginsF(15, 15, 15, 15),
     )
-    web_view.page().printToPdf(str(dest), layout)
+    page = web_view.page()
+    if page is None:
+        raise RuntimeError("export_pdf: web_view has no associated page")
+    page.printToPdf(str(dest), layout)
