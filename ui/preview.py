@@ -7,6 +7,7 @@ from __future__ import annotations
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings
 from PyQt6.QtCore import QUrl
+from PyQt6.QtGui import QColor
 from themes import AppTheme
 from core.renderer import MarkdownRenderer
 from core.page_builder import build_page
@@ -24,15 +25,10 @@ class PreviewPane(QWebEngineView):
             QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True
         )
 
-        self.page().setBackgroundColor(
-            __import__("PyQt6.QtGui", fromlist=["QColor"]).QColor(theme.preview_bg)
-        )
+        self.page().setBackgroundColor(QColor(theme.preview_bg))
 
     def update_content(self, markdown_text: str) -> None:
-        from core.renderer import MarkdownRenderer
-
-        renderer = MarkdownRenderer()
-        fragment = renderer.render(markdown_text)
+        fragment = self._renderer.render(markdown_text)
         code_css = MarkdownRenderer.pygments_css(self._theme.code_style)
         page_html = build_page(fragment, self._theme, code_css)
         # Preserve scroll position
@@ -50,6 +46,4 @@ class PreviewPane(QWebEngineView):
 
     def apply_theme(self, theme: AppTheme) -> None:
         self._theme = theme
-        self.page().setBackgroundColor(
-            __import__("PyQt6.QtGui", fromlist=["QColor"]).QColor(theme.preview_bg)
-        )
+        self.page().setBackgroundColor(QColor(theme.preview_bg))

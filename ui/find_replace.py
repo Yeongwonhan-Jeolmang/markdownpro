@@ -4,6 +4,7 @@ Floating Find & Replace panel that operates on a QPlainTextEdit.
 """
 
 from __future__ import annotations
+import re
 from PyQt6.QtWidgets import (
     QWidget,
     QHBoxLayout,
@@ -13,7 +14,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QCheckBox,
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QRegularExpression
 from PyQt6.QtGui import QTextDocument, QTextCursor
 from themes import AppTheme
 
@@ -76,6 +77,8 @@ class FindReplaceBar(QWidget):
         self._btn_replace_all.clicked.connect(self.replace_all)
         self._btn_close.clicked.connect(self.hide)
         self._find_input.textChanged.connect(self._update_match_count)
+        self._case_cb.toggled.connect(self._update_match_count)
+        self._regex_cb.toggled.connect(self._update_match_count)
 
         self.apply_theme(theme)
 
@@ -90,39 +93,79 @@ class FindReplaceBar(QWidget):
     # ── Search helpers ──────────────────────────────────────────────────────
     def _flags(self) -> QTextDocument.FindFlag:
         flags = QTextDocument.FindFlag(0)
-        if self._case_cb.isChecked():
+        # FindCaseSensitively is ignored by Qt when searching with a
+        # QRegularExpression; case sensitivity is set on the regex itself.
+        if self._case_cb.isChecked() and not self._regex_cb.isChecked():
             flags |= QTextDocument.FindFlag.FindCaseSensitively
         return flags
 
     def _get_expr(self) -> str:
         return self._find_input.text()
 
+    def _build_regex(self) -> QRegularExpression | None:
+        pattern = self._get_expr()
+        if not pattern:
+            return None
+        options = QRegularExpression.PatternOption.NoPatternOption
+        if not self._case_cb.isChecked():
+            options |= QRegularExpression.PatternOption.CaseInsensitiveOption
+        regex = QRegularExpression(pattern, options)
+        if not regex.isValid():
+            return None
+        return regex
+
+    def _find(self, backward: bool = False) -> bool:
+        if not self._editor or not self._get_expr():
+            return False
+        flags = self._flags()
+        if backward:
+            flags |= QTextDocument.FindFlag.FindBackward
+        if self._regex_cb.isChecked():
+            regex = self._build_regex()
+            if regex is None:
+                return False
+            return self._editor.find(regex, flags)
+        return self._editor.find(self._get_expr(), flags)
+
     def find_next(self) -> None:
-        if not self._editor or not self._get_expr():
+        if self._find():
             return
-        found = self._editor.find(self._get_expr(), self._flags())
-        if not found:
-            cur = self._editor.textCursor()
-            cur.movePosition(QTextCursor.MoveOperation.Start)
-            self._editor.setTextCursor(cur)
-            self._editor.find(self._get_expr(), self._flags())
-
-    def find_prev(self) -> None:
         if not self._editor or not self._get_expr():
-            return
-        flags = self._flags() | QTextDocument.FindFlag.FindBackward
-        found = self._editor.find(self._get_expr(), flags)
-        if not found:
-            cur = self._editor.textCursor()
-            cur.movePosition(QTextCursor.MoveOperation.End)
-            self._editor.setTextCursor(cur)
-            self._editor.find(self._get_expr(), flags)
-
-    def replace_one(self) -> None:
-        if not self._editor:
             return
         cur = self._editor.textCursor()
-        if cur.hasSelection() and cur.selectedText() == self._get_expr():
+        cur.movePosition(QTextCursor.MoveOperation.Start)
+        self._editor.setTextCursor(cur)
+        self._find()
+
+    def find_prev(self) -> None:
+        if self._find(backward=True):
+            return
+        if not self._editor or not self._get_expr():
+            return
+        cur = self._editor.textCursor()
+        cur.movePosition(QTextCursor.MoveOperation.End)
+        self._editor.setTextCursor(cur)
+        self._find(backward=True)
+
+    def _selection_matches(self, selected: str) -> bool:
+        """Check whether the current selection is a match for the search term,
+        respecting the case-sensitivity and regex checkboxes."""
+        expr = self._get_expr()
+        if self._regex_cb.isChecked():
+            regex = self._build_regex()
+            if regex is None:
+                return False
+            match = regex.match(selected)
+            return match.hasMatch() and match.capturedLength() == len(selected)
+        if self._case_cb.isChecked():
+            return selected == expr
+        return selected.lower() == expr.lower()
+
+    def replace_one(self) -> None:
+        if not self._editor or not self._get_expr():
+            return
+        cur = self._editor.textCursor()
+        if cur.hasSelection() and self._selection_matches(cur.selectedText()):
             cur.insertText(self._rep_input.text())
         self.find_next()
 
@@ -130,17 +173,14 @@ class FindReplaceBar(QWidget):
         if not self._editor or not self._get_expr():
             return
         text = self._editor.toPlainText()
-        if self._case_cb.isChecked():
-            new = text.replace(self._get_expr(), self._rep_input.text())
-        else:
-            import re
-
-            new = re.sub(
-                re.escape(self._get_expr()),
-                self._rep_input.text(),
-                text,
-                flags=re.IGNORECASE,
-            )
+        pattern = self._get_expr()
+        if not self._regex_cb.isChecked():
+            pattern = re.escape(pattern)
+        flags = 0 if self._case_cb.isChecked() else re.IGNORECASE
+        try:
+            new = re.sub(pattern, self._rep_input.text(), text, flags=flags)
+        except re.error:
+            return
         self._editor.setPlainText(new)
 
     def _update_match_count(self) -> None:
@@ -148,12 +188,13 @@ class FindReplaceBar(QWidget):
             self._match_label.setText("")
             return
         text = self._editor.toPlainText()
-        import re
-
+        pattern = self._get_expr()
+        if not self._regex_cb.isChecked():
+            pattern = re.escape(pattern)
         flags = 0 if self._case_cb.isChecked() else re.IGNORECASE
         try:
-            count = len(re.findall(re.escape(self._get_expr()), text, flags))
-        except Exception:
+            count = len(re.findall(pattern, text, flags))
+        except re.error:
             count = 0
         self._match_label.setText(f"{count} match{'es' if count != 1 else ''}")
 

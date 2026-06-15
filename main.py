@@ -42,6 +42,8 @@ def main() -> None:
 
             window._document = Document.open(path)
             window._editor.setPlainText(window._document.text)
+            window._status.set_file(window._document.display_name)
+            window.setWindowTitle(f"MarkdownPro – {window._document.path.name}")
 
     window.show()
     sys.exit(app.exec())

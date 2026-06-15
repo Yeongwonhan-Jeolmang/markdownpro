@@ -232,10 +232,11 @@ class MainWindow(QMainWindow):
 
     def _insert_snippet(self, prefix: str, suffix: str, placeholder: str) -> None:
         cur = self._editor.textCursor()
+        had_selection = cur.hasSelection()
         selected = cur.selectedText() or placeholder or ""
         cur.insertText(f"{prefix}{selected}{suffix}")
-        if not cur.hasSelection() and placeholder:
-            # Select the placeholder
+        if not had_selection and placeholder:
+            # Select the placeholder so the user can type over it
             pos = cur.position()
             cur.setPosition(pos - len(suffix) - len(placeholder))
             cur.setPosition(pos - len(suffix), cur.MoveMode.KeepAnchor)

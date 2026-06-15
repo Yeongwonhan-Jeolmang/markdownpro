@@ -68,7 +68,9 @@ class Toolbar(QWidget):
 
         # Insert helpers
         self._btn_bold = ToolButton("B", "Bold  (Ctrl+B)")
+        self._btn_bold.setObjectName("bold")
         self._btn_italic = ToolButton("I", "Italic  (Ctrl+I)")
+        self._btn_italic.setObjectName("italic")
         self._btn_code = ToolButton("</>", "Inline code")
         self._btn_link = ToolButton("⛓", "Insert link")
         self._btn_img = ToolButton("⊞", "Insert image")

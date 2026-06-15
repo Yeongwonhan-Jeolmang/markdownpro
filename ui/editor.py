@@ -44,10 +44,16 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         self._rules = [
             # ATX headings
             (re.compile(r"^#{1,6} .+$"), fmt(accent.name(), bold=True)),
-            # Bold
+            # Italic (single * or _, but not part of a ** or __ pair)
+            (
+                re.compile(
+                    r"(?<!\*)\*(?!\*)[^*]+?(?<!\*)\*(?!\*)"
+                    r"|(?<!_)_(?!_)[^_]+?(?<!_)_(?!_)"
+                ),
+                fmt(fg.name(), italic=True),
+            ),
+            # Bold (applied after italic so it wins on overlapping ranges)
             (re.compile(r"\*\*[^*]+\*\*|__[^_]+__"), fmt(fg.name(), bold=True)),
-            # Italic
-            (re.compile(r"\*[^*]+\*|_[^_]+_"), fmt(fg.name(), italic=True)),
             # Inline code
             (re.compile(r"`[^`]+`"), fmt("#7EC8B5")),
             # Code fences
