@@ -1,6 +1,6 @@
 """
 themes/__init__.py
-All visual themes for the app shell (editor + chrome) and the HTML preview. Credits go to the marvelous Florian van den Bersselaar.
+All visual themes for the app shell (editor + chrome) and the HTML preview.
 """
 
 from __future__ import annotations
@@ -26,15 +26,19 @@ class AppTheme:
     accent_fg: str
     # Pygments style name
     code_style: str
-    # Preview CSS body background
+    # Preview colors
     preview_bg: str
     preview_fg: str
+    preview_fg_dim: str  # muted text (blockquotes, captions, footnotes)
+    preview_surface: str  # subtle raised surface (code bg, table headers, TOC)
+    preview_border: str  # dividers, table borders, HR
+    preview_dark: bool  # True = dark preview; flips rgba overlay polarity
 
 
 THEMES: dict[str, AppTheme] = {
     "Ink": AppTheme(
         name="Ink",
-        # Dark
+        # Dark slate editor and matching dark preview
         editor_bg="#1B1E27",
         editor_fg="#C9D1E0",
         editor_sel="#2E3A52",
@@ -48,12 +52,16 @@ THEMES: dict[str, AppTheme] = {
         accent="#5E9BF0",
         accent_fg="#FFFFFF",
         code_style="one-dark",
-        preview_bg="#FAFAF8",
-        preview_fg="#1A1A1A",
+        preview_bg="#1B1E27",
+        preview_fg="#C9D1E0",
+        preview_fg_dim="#6B7494",
+        preview_surface="#22263A",
+        preview_border="#2A2E3E",
+        preview_dark=True,
     ),
     "Parchment": AppTheme(
         name="Parchment",
-        # Warm paper tones
+        # Warm paper tones sepia-tinted light theme
         editor_bg="#FDF6E3",
         editor_fg="#3B2D1E",
         editor_sel="#E6D5B0",
@@ -69,10 +77,14 @@ THEMES: dict[str, AppTheme] = {
         code_style="friendly",
         preview_bg="#FDF6E3",
         preview_fg="#2C1E10",
+        preview_fg_dim="#9E8B72",
+        preview_surface="#F0E6CC",
+        preview_border="#D4C59A",
+        preview_dark=False,
     ),
     "Graphite": AppTheme(
         name="Graphite",
-        # Pure monochrome
+        # Pure monochrome charcoal + white
         editor_bg="#212121",
         editor_fg="#E0E0E0",
         editor_sel="#3A3A3A",
@@ -86,8 +98,12 @@ THEMES: dict[str, AppTheme] = {
         accent="#EEEEEE",
         accent_fg="#181818",
         code_style="monokai",
-        preview_bg="#FFFFFF",
-        preview_fg="#111111",
+        preview_bg="#1A1A1A",
+        preview_fg="#DEDEDE",
+        preview_fg_dim="#888888",
+        preview_surface="#272727",
+        preview_border="#333333",
+        preview_dark=True,
     ),
 }
 
