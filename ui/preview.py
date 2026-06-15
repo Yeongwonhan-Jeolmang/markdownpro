@@ -20,12 +20,17 @@ class PreviewPane(QWebEngineView):
 
         s = self.settings()
         s.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
-        s.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
+        s.setAttribute(
+            QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True
+        )
 
-        self.page().setBackgroundColor(__import__("PyQt6.QtGui", fromlist=["QColor"]).QColor(theme.preview_bg))
+        self.page().setBackgroundColor(
+            __import__("PyQt6.QtGui", fromlist=["QColor"]).QColor(theme.preview_bg)
+        )
 
     def update_content(self, markdown_text: str) -> None:
         from core.renderer import MarkdownRenderer
+
         renderer = MarkdownRenderer()
         fragment = renderer.render(markdown_text)
         code_css = MarkdownRenderer.pygments_css(self._theme.code_style)
@@ -33,7 +38,7 @@ class PreviewPane(QWebEngineView):
         # Preserve scroll position
         self.page().runJavaScript(
             "window.scrollY",
-            lambda y: self._set_html_preserve_scroll(page_html, int(y) if y else 0)
+            lambda y: self._set_html_preserve_scroll(page_html, int(y) if y else 0),
         )
 
     def _set_html_preserve_scroll(self, html: str, scroll_y: int) -> None:
