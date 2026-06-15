@@ -19,7 +19,6 @@ def export_pdf(web_view, dest: Path) -> None:
     """
     from PyQt6.QtCore import QMarginsF
     from PyQt6.QtGui import QPageLayout, QPageSize
-    from PyQt6.QtCore import QSizeF
 
     layout = QPageLayout(
         QPageSize(QPageSize.PageSizeId.A4),

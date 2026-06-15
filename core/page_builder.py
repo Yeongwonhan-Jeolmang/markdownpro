@@ -5,7 +5,6 @@ Wraps a rendered HTML fragment in a full, styled HTML page for the preview pane.
 
 from __future__ import annotations
 from themes import AppTheme
-from core.renderer import MarkdownRenderer
 
 
 def build_page(fragment: str, theme: AppTheme, code_css: str) -> str:
