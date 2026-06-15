@@ -65,3 +65,59 @@ class MarkdownHighlighter(QSyntaxHighlighter):
         for pattern, fmt in self._rules:
             for m in pattern.finditer(text):
                 self.setFormat(m.start(), m.end() - m.start(), fmt)
+
+# ── Line number gutter ─────────────────────────────────────────────────────
+
+class LineNumberGutter(QWidget):
+    def __init__(self, editor: "MarkdownEditor") -> None:
+        super().__init__(editor)
+        self._editor = editor
+
+    def sizeHint(self) -> QSize:
+        return QSize(self._editor.gutter_width(), 0)
+
+    def paintEvent(self, event) -> None:
+        self._editor.paint_gutter(event)
+
+# ── Main editor ────────────────────────────────────────────────────────────
+
+class MarkdownEditor(QPlainTextEdit):
+    stats_changed = pyqtSignal(int, int, int)  # words, chars, lines
+
+    def __init__(self, theme: AppTheme) -> None:
+        super().__init__()
+        self._theme = theme
+        self._show_numbers = True
+        self._gutter = LineNumberGutter(self)
+        self._highlighter: MarkdownHighlighter | None = None
+
+        self.apply_theme(theme)
+
+        self.blockCountChanged.connect(self._update_gutter_width)
+        self.updateRequest.connect(self._update_gutter)
+        self.cursorPositionChanged.connect(self._highlight_current_line)
+        self.textChanged.connect(self._emit_stats)
+
+        self._update_gutter_width(0)
+        self._highlight_current_line()
+
+    # ── Theme ──────────────────────────────────────────────────────────────
+    def apply_theme(self, theme: AppTheme) -> None:
+        self._theme = theme
+        font = QFont()
+        font.setFamily("JetBrains Mono")
+        font.setStyleHint(QFont.StyleHint.Monospace)
+        font.setPointSize(13)
+        self.setFont(font)
+        self.setStyleSheet(f"""
+            QPlainTextEdit {{
+                background: {theme.editor_bg};
+                color: {theme.editor_fg};
+                border: none;
+                selection-background-color: {theme.editor_sel};
+                padding: 12px 0 12px 8px;
+            }}
+        """)
+        if self._highlighter:
+            self._highlighter.setDocument(None)
+        self._highlighter = MarkdownHighlighter(self.document(), theme)
