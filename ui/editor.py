@@ -1,7 +1,7 @@
 """
 ui/editor.py
-A plain-text editor widget with Markdown-aware line-highlighting,
-live word/char counter, and optional line numbers.
+A plain-text editor widget with Markdown-aware syntax highlighting,
+live word/char counter, optional line numbers, word wrap toggle, and font zoom.
 """
 
 from __future__ import annotations
@@ -35,7 +35,13 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             document.defaultFont().pointSize() if document is not None else 13
         )
 
-        def fmt(color=None, bold=False, italic=False, size_delta=0) -> QTextCharFormat:
+        def fmt(
+            color=None,
+            bold=False,
+            italic=False,
+            size_delta=0,
+            strikeout=False,
+        ) -> QTextCharFormat:
             f = QTextCharFormat()
             if color:
                 f.setForeground(QColor(color))
@@ -45,11 +51,15 @@ class MarkdownHighlighter(QSyntaxHighlighter):
                 f.setFontItalic(True)
             if size_delta:
                 f.setFontPointSize(base_font_size + size_delta)
+            if strikeout:
+                f.setFontStrikeOut(True)
             return f
 
         self._rules = [
             # ATX headings
             (re.compile(r"^#{1,6} .+$"), fmt(accent.name(), bold=True)),
+            # Strikethrough  ~~text~~
+            (re.compile(r"~~[^~]+~~"), fmt(dim.name(), strikeout=True)),
             # Italic (single * or _, but not part of a ** or __ pair)
             (
                 re.compile(
@@ -72,7 +82,11 @@ class MarkdownHighlighter(QSyntaxHighlighter):
             (re.compile(r"^>.*$"), fmt(dim.name(), italic=True)),
             # HR
             (re.compile(r"^[-*_]{3,}$"), fmt(dim.name())),
-            # Lists
+            # Task list checked  - [x]
+            (re.compile(r"^[\s]*[-*+] \[x\] .+$", re.IGNORECASE), fmt("#4CAF50")),
+            # Task list unchecked  - [ ]
+            (re.compile(r"^[\s]*[-*+] \[ \] .+$"), fmt(accent.name())),
+            # Regular lists (after task-list rules so they don't override)
             (re.compile(r"^[\s]*[-*+] "), fmt(accent.name())),
             (re.compile(r"^[\s]*\d+\. "), fmt(accent.name())),
             # HTML tags
@@ -107,6 +121,7 @@ class LineNumberGutter(QWidget):
 
 class MarkdownEditor(QPlainTextEdit):
     stats_changed = pyqtSignal(int, int, int)  # words, chars, lines
+    cursor_moved = pyqtSignal(int, int)  # line, column (1-based)
 
     def __init__(self, theme: AppTheme) -> None:
         super().__init__()
@@ -120,6 +135,7 @@ class MarkdownEditor(QPlainTextEdit):
         self.blockCountChanged.connect(self._update_gutter_width)
         self.updateRequest.connect(self._update_gutter)
         self.cursorPositionChanged.connect(self._highlight_current_line)
+        self.cursorPositionChanged.connect(self._emit_cursor_pos)
         self.textChanged.connect(self._emit_stats)
 
         self._update_gutter_width(0)
@@ -229,6 +245,28 @@ class MarkdownEditor(QPlainTextEdit):
         chars = len(text)
         lines = self.blockCount()
         self.stats_changed.emit(words, chars, lines)
+
+    def _emit_cursor_pos(self) -> None:
+        cur = self.textCursor()
+        line = cur.blockNumber() + 1
+        col = cur.positionInBlock() + 1
+        self.cursor_moved.emit(line, col)
+
+    # ── Font zoom ───────────────────────────────────────────────────────────
+    def zoom_in_font(self) -> None:
+        self.zoomIn(1)
+
+    def zoom_out_font(self) -> None:
+        self.zoomOut(1)
+
+    # ── Word wrap ───────────────────────────────────────────────────────────
+    def toggle_word_wrap(self, enabled: bool) -> None:
+        mode = (
+            QPlainTextEdit.LineWrapMode.WidgetWidth
+            if enabled
+            else QPlainTextEdit.LineWrapMode.NoWrap
+        )
+        self.setLineWrapMode(mode)
 
     # ── Public ─────────────────────────────────────────────────────────────
     def toggle_line_numbers(self, visible: bool) -> None:

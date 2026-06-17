@@ -1,6 +1,6 @@
 """
 ui/statusbar.py
-Custom status bar with word/char/line counts and theme/mode indicators.
+Custom status bar with word/char/line counts, cursor position, and mode indicator.
 """
 
 from __future__ import annotations
@@ -21,12 +21,14 @@ class StatusBar(QWidget):
 
         self._file_label = QLabel("Untitled")
         self._spacer = QLabel()
+        self._cursor_label = QLabel("Ln 1, Col 1")
         self._stats_label = QLabel("0 words · 0 chars · 1 line")
         self._mode_label = QLabel("Split")
 
         for lbl in (
             self._file_label,
             self._spacer,
+            self._cursor_label,
             self._stats_label,
             self._mode_label,
         ):
@@ -34,6 +36,8 @@ class StatusBar(QWidget):
 
         layout.addWidget(self._file_label)
         layout.addWidget(self._spacer, 1)
+        layout.addWidget(self._cursor_label)
+        layout.addSpacing(16)
         layout.addWidget(self._stats_label)
         layout.addSpacing(20)
         layout.addWidget(self._mode_label)
@@ -62,6 +66,9 @@ class StatusBar(QWidget):
         self._stats_label.setText(
             f"{words:,} words · {chars:,} chars · {lines:,} lines"
         )
+
+    def set_cursor(self, line: int, col: int) -> None:
+        self._cursor_label.setText(f"Ln {line}, Col {col}")
 
     def set_mode(self, mode: str) -> None:
         self._mode_label.setText(mode)

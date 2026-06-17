@@ -1,6 +1,6 @@
 """
 ui/toolbar.py
-Top toolbar with file actions, view modes, and theme switcher.
+Top toolbar with file actions, view modes, insert helpers, and theme switcher.
 """
 
 from __future__ import annotations
@@ -42,15 +42,21 @@ class Toolbar(QWidget):
     save_as = pyqtSignal()
     export_html_sig = pyqtSignal()
     export_pdf_sig = pyqtSignal()
+    print_sig = pyqtSignal()
     view_changed = pyqtSignal(str)  # "editor" | "split" | "preview"
+    insert_action = pyqtSignal(str)  # insert action names, separate from view
     theme_changed = pyqtSignal(str)
     find_triggered = pyqtSignal()
     toggle_numbers = pyqtSignal(bool)
+    toggle_wrap = pyqtSignal(bool)
+    undo_triggered = pyqtSignal()
+    redo_triggered = pyqtSignal()
 
     def __init__(self, theme: AppTheme) -> None:
         super().__init__()
         self._theme = theme
         self._number_on = True
+        self._wrap_on = True
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 0, 10, 0)
@@ -68,12 +74,20 @@ class Toolbar(QWidget):
         layout.addWidget(self._btn_save_as)
         layout.addWidget(Divider())
 
+        # Undo / Redo
+        self._btn_undo = ToolButton("↩", "Undo  (Ctrl+Z)")
+        self._btn_redo = ToolButton("↪", "Redo  (Ctrl+Y)")
+        layout.addWidget(self._btn_undo)
+        layout.addWidget(self._btn_redo)
+        layout.addWidget(Divider())
+
         # Insert helpers
         self._btn_bold = ToolButton("B", "Bold  (Ctrl+B)")
         self._btn_bold.setObjectName("bold")
         self._btn_italic = ToolButton("I", "Italic  (Ctrl+I)")
         self._btn_italic.setObjectName("italic")
-        self._btn_code = ToolButton("</>", "Inline code")
+        self._btn_code = ToolButton("</>", "Inline code  (Ctrl+`)")
+        self._btn_fence = ToolButton("```", "Fenced code block  (Ctrl+Shift+`)")
         self._btn_link = ToolButton("⛓", "Insert link")
         self._btn_img = ToolButton("⊞", "Insert image")
         self._btn_table = ToolButton("⊟", "Insert table")
@@ -82,6 +96,7 @@ class Toolbar(QWidget):
             self._btn_bold,
             self._btn_italic,
             self._btn_code,
+            self._btn_fence,
             self._btn_link,
             self._btn_img,
             self._btn_table,
@@ -99,13 +114,21 @@ class Toolbar(QWidget):
         self._btn_lnum.setCheckable(True)
         self._btn_lnum.setChecked(True)
         layout.addWidget(self._btn_lnum)
+
+        # Word wrap toggle
+        self._btn_wrap = ToolButton("↵", "Toggle word wrap")
+        self._btn_wrap.setCheckable(True)
+        self._btn_wrap.setChecked(True)
+        layout.addWidget(self._btn_wrap)
         layout.addWidget(Divider())
 
-        # Export
+        # Export / Print
         self._btn_exp_html = ToolButton("↓ HTML", "Export to HTML")
         self._btn_exp_pdf = ToolButton("↓ PDF", "Export to PDF")
+        self._btn_print = ToolButton("⎙", "Print  (Ctrl+P)")
         layout.addWidget(self._btn_exp_html)
         layout.addWidget(self._btn_exp_pdf)
+        layout.addWidget(self._btn_print)
 
         layout.addStretch()
 
@@ -137,8 +160,12 @@ class Toolbar(QWidget):
         self._btn_save_as.clicked.connect(self.save_as)
         self._btn_exp_html.clicked.connect(self.export_html_sig)
         self._btn_exp_pdf.clicked.connect(self.export_pdf_sig)
+        self._btn_print.clicked.connect(self.print_sig)
         self._btn_find.clicked.connect(self.find_triggered)
         self._btn_lnum.toggled.connect(self.toggle_numbers)
+        self._btn_wrap.toggled.connect(self.toggle_wrap)
+        self._btn_undo.clicked.connect(self.undo_triggered)
+        self._btn_redo.clicked.connect(self.redo_triggered)
 
         self._view_editor.clicked.connect(lambda: self._switch_view("editor"))
         self._view_split.clicked.connect(lambda: self._switch_view("split"))
@@ -146,13 +173,14 @@ class Toolbar(QWidget):
 
         self._theme_combo.currentTextChanged.connect(self.theme_changed)
 
-        # Insert shortcuts
-        self._btn_bold.clicked.connect(self._insert_bold)
-        self._btn_italic.clicked.connect(self._insert_italic)
-        self._btn_code.clicked.connect(self._insert_code)
-        self._btn_link.clicked.connect(self._insert_link)
-        self._btn_img.clicked.connect(self._insert_image)
-        self._btn_table.clicked.connect(self._insert_table)
+        # Insert actions — use dedicated insert_action signal
+        self._btn_bold.clicked.connect(lambda: self.insert_action.emit("bold"))
+        self._btn_italic.clicked.connect(lambda: self.insert_action.emit("italic"))
+        self._btn_code.clicked.connect(lambda: self.insert_action.emit("code"))
+        self._btn_fence.clicked.connect(lambda: self.insert_action.emit("fence"))
+        self._btn_link.clicked.connect(lambda: self.insert_action.emit("link"))
+        self._btn_img.clicked.connect(lambda: self.insert_action.emit("image"))
+        self._btn_table.clicked.connect(lambda: self.insert_action.emit("table"))
 
     def _switch_view(self, mode: str) -> None:
         for btn, m in (
@@ -165,25 +193,6 @@ class Toolbar(QWidget):
             if style is not None:
                 style.polish(btn)
         self.view_changed.emit(mode)
-
-    # ── Insert helpers (emit signals consumed by MainWindow) ───────────────
-    def _insert_bold(self) -> None:
-        self.view_changed.emit("__insert__bold__")
-
-    def _insert_italic(self) -> None:
-        self.view_changed.emit("__insert__italic__")
-
-    def _insert_code(self) -> None:
-        self.view_changed.emit("__insert__code__")
-
-    def _insert_link(self) -> None:
-        self.view_changed.emit("__insert__link__")
-
-    def _insert_image(self) -> None:
-        self.view_changed.emit("__insert__image__")
-
-    def _insert_table(self) -> None:
-        self.view_changed.emit("__insert__table__")
 
     # ── Theme ──────────────────────────────────────────────────────────────
     def apply_theme(self, theme: AppTheme) -> None:
@@ -208,6 +217,10 @@ class Toolbar(QWidget):
                 color: {theme.fg};
             }}
             QPushButton[active=true] {{
+                background: {theme.accent};
+                color: {theme.accent_fg};
+            }}
+            QPushButton:checked {{
                 background: {theme.accent};
                 color: {theme.accent_fg};
             }}

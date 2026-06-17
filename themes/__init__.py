@@ -29,16 +29,15 @@ class AppTheme:
     # Preview colors
     preview_bg: str
     preview_fg: str
-    preview_fg_dim: str  # muted text (blockquotes, captions, footnotes)
-    preview_surface: str  # subtle raised surface (code bg, table headers, TOC)
-    preview_border: str  # dividers, table borders, HR
-    preview_dark: bool  # True = dark preview; flips rgba overlay polarity
+    preview_fg_dim: str
+    preview_surface: str
+    preview_border: str
+    preview_dark: bool
 
 
 THEMES: dict[str, AppTheme] = {
     "Ink": AppTheme(
         name="Ink",
-        # Dark slate editor and matching dark preview
         editor_bg="#1B1E27",
         editor_fg="#C9D1E0",
         editor_sel="#2E3A52",
@@ -61,7 +60,6 @@ THEMES: dict[str, AppTheme] = {
     ),
     "Parchment": AppTheme(
         name="Parchment",
-        # Warm paper tones sepia-tinted light theme
         editor_bg="#FDF6E3",
         editor_fg="#3B2D1E",
         editor_sel="#E6D5B0",
@@ -84,7 +82,6 @@ THEMES: dict[str, AppTheme] = {
     ),
     "Graphite": AppTheme(
         name="Graphite",
-        # Pure monochrome charcoal + white
         editor_bg="#212121",
         editor_fg="#E0E0E0",
         editor_sel="#3A3A3A",
@@ -105,6 +102,33 @@ THEMES: dict[str, AppTheme] = {
         preview_border="#333333",
         preview_dark=True,
     ),
+    "Light": AppTheme(
+        name="Light",
+        editor_bg="#FFFFFF",
+        editor_fg="#1A1A1A",
+        editor_sel="#B5D5FF",
+        editor_line="#F5F7FA",
+        editor_font="'JetBrains Mono', 'Fira Code', monospace",
+        bg="#F0F2F5",
+        surface="#FFFFFF",
+        border="#DCDFE6",
+        fg="#1A1A1A",
+        fg_dim="#767676",
+        accent="#0066CC",
+        accent_fg="#FFFFFF",
+        code_style="friendly",
+        preview_bg="#FFFFFF",
+        preview_fg="#1A1A1A",
+        preview_fg_dim="#666666",
+        preview_surface="#F5F7FA",
+        preview_border="#E0E4EC",
+        preview_dark=False,
+    ),
 }
 
 DEFAULT_THEME = "Ink"
+
+
+def theme_for_color_scheme(is_dark: bool) -> str:
+    """Return a theme name that matches the OS color scheme."""
+    return "Ink" if is_dark else "Light"
